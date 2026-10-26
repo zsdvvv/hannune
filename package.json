@@ -1,0 +1,101 @@
+{
+  "name": "hannune",
+  "productName": "한눈에 일정판",
+  "version": "1.2.0",
+  "description": "할 일·마감을 긴박한 순으로 한눈에 — 글로 바꾸기, 문서에서 일정 찾기, 구글 캘린더, 무료 AI 에이전트",
+  "main": "main.js",
+  "author": "zsdvvv",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/zsdvvv/hannune",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zsdvvv/hannune.git"
+  },
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "electron-builder --mac dmg --x64 --arm64 --publish never",
+    "dist:linux": "electron-builder --linux AppImage --publish never"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.4.299"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.github.hannune",
+    "productName": "한눈에 일정판",
+    "executableName": "Hannune",
+    "artifactName": "Hannune-${version}-${os}-${arch}.${ext}",
+    "afterPack": "build/adhoc-sign.js",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "scan/**",
+      "svc/**",
+      "ui/**",
+      "assets/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "svc/fgwin.ps1",
+      "node_modules/pdfjs-dist/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "한눈에 일정판",
+      "runAfterFinish": true,
+      "artifactName": "Hannune-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "Hannune-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

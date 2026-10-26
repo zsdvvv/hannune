@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'">
+<title>한눈에</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="frame" id="frame">
+<header class="bar">
+  <div class="brand"><span class="mark">한눈에</span><span class="today" id="today"></span><span class="clock num" id="clock"></span></div>
+  <nav class="views" id="views">
+    <button data-view="list" title="1">목록</button><button data-view="matrix" title="2">4분면</button><button data-view="timeline" title="3">달력 띠</button>
+  </nav>
+  <div class="tools">
+    <span class="rec" id="rec" hidden title="창 사용 기록이 켜져 있습니다. 누르면 설정을 엽니다.">● 창 기록 중</span>
+    <input id="q" placeholder="찾기   /" autocomplete="off">
+    <button class="btn" id="btnAdd" title="할 일 넣기 (N)">＋ 할 일</button>
+    <button class="btn" id="btnAI" title="AI로 영역·주제·마감·다음 할 일 정리">AI 정리</button>
+    <button class="btn" id="btnScan" title="다시 읽기 (R)">다시 읽기</button>
+    <button class="btn" id="btnPin" title="이 창을 늘 맨 위에">고정</button>
+    <button class="btn" id="btnMini" title="작은 창을 화면 구석에 띄움 (Ctrl+Alt+M)">미니</button>
+    <button class="btn" id="btnSet" title="설정">설정</button>
+  </div>
+</header>
+<div class="body" id="body">
+  <aside class="side" id="side"></aside>
+  <div class="split" id="splitL" title="끌어서 너비 조절 · 두 번 누르면 접기/펴기"></div>
+  <main id="main"></main>
+  <div class="split" id="splitR" title="끌어서 너비 조절"></div>
+  <section class="detail" id="detail" hidden></section>
+</div>
+<form class="quick" id="quick" autocomplete="off">
+  <span class="ql">바로 넣기</span>
+  <input id="quickIn" placeholder="예: 내일 오후 3시까지 보고서 제출 ★★★ #업무   ·   금요일 회의 준비   ·   11/5 장학금 신청 중요">
+  <span class="qp" id="quickPrev"></span>
+  <button class="btn on">넣기</button>
+</form>
+<footer class="status" id="status"></footer>
+</div>
+<div class="brief" id="brief" hidden></div>
+<div class="modal" id="modal" hidden></div>
+<div class="modal" id="modal2" hidden></div>
+<div class="pop" id="pop" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<script src="common.js"></script>
+<script src="nlp.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

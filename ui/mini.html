@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>한눈에 미니</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body.mini { border: 1px solid var(--rule); }
+  .mh { height: 38px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--rule); -webkit-app-region: drag; user-select: none; }
+  .mh .mark { font-size: 15px; }
+  .mh .clock { font-size: 13px; color: var(--ink-3); }
+  .mh button { -webkit-app-region: no-drag; border: 0; background: transparent; color: var(--ink-3); font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+  .mh button:hover { background: var(--paper-2); color: var(--ink); }
+  .mh .sp { margin-left: auto; }
+  #list { flex: 1; overflow-y: auto; }
+  .mr { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--rule-2); cursor: pointer; border-left: 3px solid var(--a); }
+  .mr:hover { background: var(--sheet-2); }
+  .mr .dd .big { font-size: 20px; }
+  .mr .dd .stamp { font-size: 13px; }
+  .mr .dd .sub { font-size: 10.5px; margin-top: 1px; }
+  .mr .t { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mr .g { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mf { height: 26px; flex: none; display: flex; align-items: center; padding: 0 12px; font-size: 11.5px; color: var(--ink-3); border-top: 1px solid var(--rule); white-space: nowrap; overflow: hidden; }
+  .mf .rec { color: var(--red); margin-left: auto; }
+  .mr { grid-template-columns: 20px 60px 1fr; }
+  .mr.done { opacity: .42; }
+  .mr.done .t { text-decoration: line-through; }
+  .mh button.on { background: var(--ink); color: var(--paper); }
+  body.mini { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+</style>
+</head>
+<body class="mini">
+<div class="mh"><span class="mark">한눈에</span><span class="clock num" id="clock"></span><span class="sp"></span>
+  <button id="hideDone">끝낸 일 감추기</button><button id="open" title="본 창 열기">본 창</button><button id="x" title="미니 창 닫기">×</button></div>
+<div id="list"></div>
+<div class="mf" id="mf"></div>
+<script src="common.js"></script>
+<script src="mini.js"></script>
+</body>
+</html>

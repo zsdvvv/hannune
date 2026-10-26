@@ -1,0 +1,34 @@
+# 버전 태그(v1.2.0 같은)를 올리면 윈도우·맥 설치본을 만들어 Releases에 올린다.
+# 손으로 돌리려면: GitHub › Actions › "설치본 만들기" › Run workflow
+name: 설치본 만들기
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            cmd: npx electron-builder --win nsis --x64 --publish always
+          - os: macos-latest
+            cmd: npx electron-builder --mac dmg --x64 --arm64 --publish always
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: ${{ matrix.cmd }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
