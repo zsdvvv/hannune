@@ -1,5 +1,6 @@
 # 버전 태그(v1.2.0 같은)를 올리면 윈도우·맥 설치본을 만들어 Releases에 올린다.
-# 손으로 돌리려면: GitHub › Actions › "설치본 만들기" › Run workflow
+# 순서: ① 초안 릴리스 만들기 → ② 윈도우·맥이 초안에 파일 올리기 → ③ 모두 끝나면 공개
+# (여러 작업이 동시에 릴리스를 만들면 같은 태그에 릴리스가 여러 개 생기므로 먼저 하나를 만든다)
 name: 설치본 만들기
 
 on:
@@ -11,7 +12,19 @@ permissions:
   contents: write
 
 jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 초안 릴리스 만들기
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+          gh release create "$GITHUB_REF_NAME" --draft --title "한눈에 일정판 ${GITHUB_REF_NAME#v}" --notes-file .github/release-notes.md
+
   build:
+    needs: draft
     strategy:
       fail-fast: false
       matrix:
@@ -32,3 +45,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 릴리스 공개
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
