@@ -1,0 +1,37 @@
+# 실행 시험: 윈도우·맥(애플 칩·인텔)에서 설치본 앱을 실제로 켜 본다. 화면·충돌 기록은 Artifacts로 받는다.
+name: 실행 시험
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build: npx electron-builder --mac dir --arm64 --publish never
+          - os: macos-15-intel
+            build: npx electron-builder --mac dir --x64 --publish never
+          - os: windows-latest
+            build: npx electron-builder --win dir --x64 --publish never
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: ${{ matrix.build }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: 앱 켜 보기
+        run: node build/smoke.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.os }}
+          path: smoke-out/
