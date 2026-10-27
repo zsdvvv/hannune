@@ -28,6 +28,11 @@ const PACKAGED = app.isPackaged;
 const DEV_LAYOUT = !PACKAGED && /[\\/]versions[\\/]v[\d.]+$/.test(APP_DIR);
 const DATA = process.env.HANNUNE_DATA || (DEV_LAYOUT ? path.resolve(APP_DIR, '..', '..', 'data') : path.join(app.getPath('userData'), 'data'));
 if (process.env.HANNUNE_DATA) app.setPath('userData', path.join(process.env.HANNUNE_DATA, '_electron')); // 시험: 흔적을 한곳에
+// v1.2.1부터 설치본 이름이 영문(Hannune)이 되어 저장 폴더가 바뀌었다 → 예전 폴더(한눈에 일정판)의 기록을 한 번 옮겨 온다
+if (PACKAGED && !process.env.HANNUNE_DATA && !fs.existsSync(DATA)) {
+  const old = path.join(app.getPath('appData'), '한눈에 일정판', 'data');
+  try { if (fs.existsSync(old) && path.resolve(old) !== path.resolve(DATA)) fs.cpSync(old, DATA, { recursive: true }); } catch (_) { /* 옮기지 못해도 새로 시작 */ }
+}
 const HOME = os.homedir();
 // HANNUNE_DEMO: 이 PC의 Claude 기록·최근 문서를 읽지 않는 보기용 실행(설명서 화면 찍기)
 const DEMO = !!process.env.HANNUNE_DEMO;
@@ -921,7 +926,18 @@ async function selftest() {
     [{ closeAll: true, graph: true }, 'graph'], [{ closeAll: true, words: true }, 'words'],
     [{ closeAll: true, settings: true, scrollTo: 'agentsec' }, 'settings_agent'],
   ];
-  for (const [t, name] of steps) { send(mainWin, 'test', t); await wait(800); await shoot(mainWin, name); }
+  for (const [t, name] of steps) {
+    send(mainWin, 'test', t); await wait(800); await shoot(mainWin, name);
+    if (name === 'edit_confirm') {
+      // 확인 창의 "적용"까지 눌러 실제로 바뀌는지
+      const before = await mainWin.webContents.executeJavaScript('JSON.stringify(E && E.cur)');
+      send(mainWin, 'test', { applyConfirm: true });
+      await wait(1200);
+      const after = await mainWin.webContents.executeJavaScript('(() => { const it = S.board.items.find(i => i.id === E.id); return JSON.stringify({ title: it.title, imp: it.importance, deadlines: it.deadlines.map(d => d.date + " " + d.time + " " + d.label + " (" + d.src + ")") }); })()');
+      console.log('apply before:', before);
+      console.log('apply after :', after);
+    }
+  }
   send(mainWin, 'test', { closeAll: true, quick: '' });
   mainWin.setBounds({ x: 0, y: 0, width: 700, height: 520 });
   await wait(900);

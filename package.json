@@ -1,7 +1,7 @@
 {
   "name": "hannune",
-  "productName": "한눈에 일정판",
-  "version": "1.2.0",
+  "productName": "Hannune",
+  "version": "1.2.1",
   "description": "할 일·마감을 긴박한 순으로 한눈에 — 글로 바꾸기, 문서에서 일정 찾기, 구글 캘린더, 무료 AI 에이전트",
   "main": "main.js",
   "author": "zsdvvv",
@@ -27,7 +27,7 @@
   },
   "build": {
     "appId": "io.github.hannune",
-    "productName": "한눈에 일정판",
+    "productName": "Hannune",
     "executableName": "Hannune",
     "artifactName": "Hannune-${version}-${os}-${arch}.${ext}",
     "afterPack": "build/adhoc-sign.js",

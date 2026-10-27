@@ -917,6 +917,7 @@ async function init() {
   hn.on('found:ai', a => { S.foundAi = a; if (S.f.sp === 'found') renderMain(); });
   hn.on('test', t => {
     if (t.closeAll) { closeModal2(); closeModal(); closePop(); }
+    if (t.applyConfirm) { const b = $('#modal2 [data-act="c-apply"]'); if (b) b.click(); }
     if (t.edit) { S.f = { area: null, group: null, sp: null }; render(); const first = sorted(visible()).find(x => x.fdl); if (first) { select(first.id); openEdit(first.id); } }
     if (t.editText) { $('#nlIn').value = t.editText; nlPreview(); runNL(false); }
     if (t.quick !== undefined) { $('#quickIn').value = t.quick; quickPreview(); $('#quickIn').focus(); }
