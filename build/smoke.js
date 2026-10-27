@@ -49,10 +49,24 @@ fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ ui: { welcom
 
 const exe = findExe();
 console.log('앱:', exe);
-const env = { ...process.env, HANNUNE_DATA: data, HANNUNE_DEMO: '1' };
+// 맥: 앱 묶음 안의 이름 구성(본체·보조 프로그램·Info.plist)을 남긴다
+if (process.platform === 'darwin') {
+  const { execSync } = require('child_process');
+  const contents = path.resolve(path.dirname(exe), '..');
+  const sh = c => { try { return execSync(c, { encoding: 'utf8' }); } catch (e) { return String(e.stdout || e.message); } };
+  const info = [
+    '## MacOS', sh(`ls -la "${contents}/MacOS"`),
+    '## Frameworks', sh(`ls -la "${contents}/Frameworks"`),
+    '## Info.plist', sh(`plutil -p "${contents}/Info.plist"`),
+    '## codesign', sh(`codesign -dv --verbose=2 "${path.resolve(contents, '..')}" 2>&1`),
+  ].join('\n');
+  fs.writeFileSync(path.join(out, 'bundle.txt'), info);
+  console.log(info);
+}
+const env = { ...process.env, HANNUNE_DATA: data, HANNUNE_DEMO: '1', ELECTRON_ENABLE_LOGGING: '1', ELECTRON_ENABLE_STACK_DUMPING: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 const started = Date.now();
-const p = spawn(exe, ['--selftest'], { env });
+const p = spawn(exe, ['--selftest', '--enable-logging=stderr', '--v=0'], { env });
 let log = '';
 p.stdout.on('data', b => { log += b; process.stdout.write(b); });
 p.stderr.on('data', b => { log += b; process.stderr.write(b); });
@@ -66,11 +80,22 @@ p.on('exit', (code, sig) => {
   const shots = path.join(data, 'cache', 'shots');
   let n = 0;
   if (fs.existsSync(shots)) for (const f of fs.readdirSync(shots)) { fs.copyFileSync(path.join(shots, f), path.join(out, f)); n++; }
-  if (process.platform === 'darwin') {
-    const dr = path.join(os.homedir(), 'Library', 'Logs', 'DiagnosticReports');
-    try { for (const f of fs.readdirSync(dr)) if (/hannune|electron|helper/i.test(f) || /한눈에/.test(f.normalize('NFC'))) fs.copyFileSync(path.join(dr, f), path.join(out, f)); } catch (_) { /* 없음 */ }
-  }
   const ok = code === 0 && fs.existsSync(path.join(out, 'view_list.png'));
-  console.log(ok ? `실행 시험 통과 (화면 ${n}장)` : '실행 시험 실패');
-  process.exit(ok ? 0 : 1);
+  const finish = () => {
+    console.log(ok ? `실행 시험 통과 (화면 ${n}장)` : '실행 시험 실패');
+    process.exit(ok ? 0 : 1);
+  };
+  if (process.platform !== 'darwin' || ok) return finish();
+  // 맥 충돌 기록은 몇 초 뒤에 써지므로 기다렸다가 최근 것을 모두 모은다
+  setTimeout(() => {
+    for (const dr of [path.join(os.homedir(), 'Library', 'Logs', 'DiagnosticReports'), '/Library/Logs/DiagnosticReports']) {
+      try {
+        for (const f of fs.readdirSync(dr)) {
+          const full = path.join(dr, f);
+          if (Date.now() - fs.statSync(full).mtimeMs < 300000) { fs.copyFileSync(full, path.join(out, f.replace(/[^\w.-]/g, '_'))); console.log('충돌 기록:', f); }
+        }
+      } catch (_) { /* 없음 */ }
+    }
+    finish();
+  }, 15000);
 });
