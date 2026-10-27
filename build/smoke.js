@@ -47,8 +47,10 @@ const user = { items: {}, manual: [], sessions: {} };
 fs.writeFileSync(path.join(data, 'user.json'), JSON.stringify(user));
 fs.writeFileSync(path.join(data, 'settings.json'), JSON.stringify({ ui: { welcomeOff: true }, idle: { enabled: false }, alarms: { digest: false } }));
 
-const exe = findExe();
-console.log('앱:', exe);
+// SMOKE_EXE·SMOKE_APPDIR: 설치본 대신 다른 실행 파일(예: 원본 Electron + 앱 폴더)로 시험
+const exe = process.env.SMOKE_EXE ? path.resolve(process.env.SMOKE_EXE) : findExe();
+const appArgs = process.env.SMOKE_APPDIR ? [path.resolve(process.env.SMOKE_APPDIR)] : [];
+console.log('앱:', exe, appArgs.join(' '));
 // 맥: 앱 묶음 안의 이름 구성(본체·보조 프로그램·Info.plist)을 남긴다
 if (process.platform === 'darwin') {
   const { execSync } = require('child_process');
@@ -66,7 +68,7 @@ if (process.platform === 'darwin') {
 const env = { ...process.env, HANNUNE_DATA: data, HANNUNE_DEMO: '1', ELECTRON_ENABLE_LOGGING: '1', ELECTRON_ENABLE_STACK_DUMPING: '1' };
 delete env.ELECTRON_RUN_AS_NODE;
 const started = Date.now();
-const p = spawn(exe, ['--selftest', '--enable-logging=stderr', '--v=0'], { env });
+const p = spawn(exe, [...appArgs, '--selftest', '--enable-logging=stderr', '--v=0'], { env });
 let log = '';
 p.stdout.on('data', b => { log += b; process.stdout.write(b); });
 p.stderr.on('data', b => { log += b; process.stderr.write(b); });
@@ -80,7 +82,7 @@ p.on('exit', (code, sig) => {
   const shots = path.join(data, 'cache', 'shots');
   let n = 0;
   if (fs.existsSync(shots)) for (const f of fs.readdirSync(shots)) { fs.copyFileSync(path.join(shots, f), path.join(out, f)); n++; }
-  const ok = code === 0 && fs.existsSync(path.join(out, 'view_list.png'));
+  const ok = code === 0 && (process.env.SMOKE_HELLO ? true : fs.existsSync(path.join(out, 'view_list.png')));
   const finish = () => {
     console.log(ok ? `실행 시험 통과 (화면 ${n}장)` : '실행 시험 실패');
     process.exit(ok ? 0 : 1);
