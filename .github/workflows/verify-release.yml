@@ -1,0 +1,58 @@
+# 설치본 확인: 공개된 릴리스에서 내려받아 실제로 설치하고 켜 본다(사용자가 하는 그대로).
+name: 설치본 확인
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 확인할 태그
+        required: true
+        default: v1.2.1
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            pattern: '*-mac-arm64.dmg'
+          - os: macos-15-intel
+            pattern: '*-mac-x64.dmg'
+          - os: windows-latest
+            pattern: 'Hannune-Setup-*.exe'
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 릴리스에서 내려받기
+        shell: bash
+        run: gh release download "$TAG" --pattern "${{ matrix.pattern }}" -D dl && ls -la dl
+      - name: 설치 (맥 — dmg를 열어 응용 프로그램 폴더로 복사)
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil attach dl/*.dmg -mountpoint /Volumes/hn -nobrowse
+          cp -R /Volumes/hn/*.app /Applications/
+          hdiutil detach /Volumes/hn
+          ls -d /Applications/Hannune.app
+          echo "SMOKE_EXE=/Applications/Hannune.app/Contents/MacOS/Hannune" >> "$GITHUB_ENV"
+      - name: 설치 (윈도우 — 설치 파일 실행)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dl -Filter *.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter Hannune.exe | Select-Object -First 1
+          Write-Output "설치됨: $($exe.FullName)"
+          "SMOKE_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: 설치된 앱 켜 보기
+        run: node build/smoke.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-${{ matrix.os }}
+          path: smoke-out/
