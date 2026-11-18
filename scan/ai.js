@@ -1,5 +1,6 @@
 // AI로 일을 읽고 영역·주제·마감·다음 할 일을 정리한다. 1단계(묶기)는 한 번, 2단계(마감·상태)는 바뀐 일만.
-// 실제로 부르는 곳(Claude Code·Gemini·Groq·Ollama …)은 main.js가 설정의 AI 에이전트로 정한다.
+// 실제로 부르는 곳(Claude Code·Gemini·Groq·Ollama …)은 main.js가 정한다. task로 어떤 일인지 알린다:
+//  organize(AI 정리)·found(찾은 일정 다듬기)는 설정 'AI 정리 › 쓸 곳', nl(AI로 해석)은 위 AI 에이전트.
 let llm = require('./claude').callClaude;
 function useLLM(fn) { llm = fn; }
 const callClaude = args => llm(args);
@@ -69,7 +70,7 @@ ${lines.join('\n')}
 ${sess.join('\n') || '(없음)'}
 
 id에는 대괄호 안의 번호(i0, s0 같은 것)만 그대로 적어라. 일 목록의 모든 i번호에 대해 빠짐없이 답하라.`;
-  const r = await callClaude({ system: '너는 일정·업무 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: GROUP_SCHEMA, model: opts.model, effort: 'low' });
+  const r = await callClaude({ task: 'organize', system: '너는 일정·업무 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: GROUP_SCHEMA, model: opts.model, effort: 'low' });
   if (opts.log) opts.log({ task: 'groups', n: board.items.length, result: r });
   const itemOf = k => board.items[Number(keyFix(k).replace(/^i/, ''))];
   const sessOf = k => board.unassigned[Number(keyFix(k).replace(/^s/, ''))];
@@ -94,7 +95,7 @@ async function runDetails(batch, texts, opts) {
 ${blocks.join('\n\n')}
 
 id에는 ### 뒤 대괄호 안의 번호(i0, i1 …)만 적고, 모든 번호에 대해 빠짐없이 답하라.`;
-  const r = await callClaude({ system: '너는 일정·업무 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: DETAIL_SCHEMA, model: opts.model, effort: 'low', timeoutMs: 400000 });
+  const r = await callClaude({ task: 'organize', system: '너는 일정·업무 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: DETAIL_SCHEMA, model: opts.model, effort: 'low', timeoutMs: 400000 });
   if (opts.log) opts.log({ task: 'details', ids: batch.map(b => b.id), result: r });
   return (r.items || []).map(x => ({ ...x, it: batch[Number(keyFix(x.id).replace(/^i/, ''))] })).filter(x => x.it);
 }
@@ -105,14 +106,16 @@ async function analyze({ board, texts, ai, onProgress, model = 'sonnet', force =
   ai.groups = ai.groups || {};
   ai.details = ai.details || {};
   ai.sessions = ai.sessions || {};
-  const items = board.items.filter(it => it.band !== 'done' || force);
+  // 폰 캘린더 일정은 사람이 정한 그대로 두므로 AI 정리에서 뺀다
+  const pool = board.items.filter(it => it.kind !== 'phonecal');
+  const items = pool.filter(it => it.band !== 'done' || force);
   const say = m => onProgress && onProgress(m);
 
   say('일을 영역·주제로 묶는 중…');
-  const g = await runGroups({ items: board.items, unassigned: board.unassigned }, { model, log });
+  const g = await runGroups({ items: pool, unassigned: board.unassigned }, { model, log });
   for (const x of g.items) ai.groups[x.it.id] = { area: x.area, group: x.group.trim(), title: x.title.trim() };
   for (const x of g.sessions) ai.sessions[x.s.id] = x.it ? x.it.id : '-';
-  const missing = board.items.length - g.items.length;
+  const missing = pool.length - g.items.length;
 
   const todo = items.filter(it => force || !ai.details[it.id] || ai.details[it.id].hash !== it.aiHash);
   const batches = [];
@@ -169,7 +172,7 @@ async function refineFound(list, { model = 'sonnet', onProgress } = {}) {
 id에는 대괄호 안 번호(i0 …)만 적고 모든 번호에 답하라.
 
 ${lines.join('\n')}`;
-    const r = await callClaude({ system: '너는 일정 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: FOUND_SCHEMA, model, effort: 'low' });
+    const r = await callClaude({ task: 'found', system: '너는 일정 정리 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: FOUND_SCHEMA, model, effort: 'low' });
     for (const x of r.items || []) {
       const src = b[Number(keyFix(x.id).replace(/^i/, ''))];
       if (!src) continue;
@@ -204,7 +207,7 @@ async function interpretChange(text, cur, opts = {}) {
 - title: 일 이름 / label: 마감 이름(예: 제출, 회의) / kind: deadline 또는 event
 - done·undone·hide·unhide·remove(이 마감 지우기)·add(새 마감으로 추가): value는 true
 src에는 그렇게 판단한 원문 조각을 넣어라. 알아들을 수 없으면 actions를 빈 배열로 두고 note에 이유를 써라.`;
-  const r = await callClaude({ system: '너는 일정 변경 요청을 해석하는 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: NL_SCHEMA, model: opts.model, effort: 'low', timeoutMs: 90000 });
+  const r = await callClaude({ task: 'nl', system: '너는 일정 변경 요청을 해석하는 비서다. 정해진 JSON 모양으로만 답한다.', prompt, schema: NL_SCHEMA, model: opts.model, effort: 'low', timeoutMs: 90000 });
   const actions = (r.actions || []).filter(a => a && a.type).map(a => {
     const v = a.type === 'imp' || /^shift/.test(a.type) ? Number(a.value) : (['done', 'undone', 'hide', 'unhide', 'remove', 'add'].includes(a.type) ? true : String(a.value));
     return { type: a.type, value: v, src: a.src || 'AI' , ai: true };

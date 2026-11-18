@@ -4,7 +4,7 @@
 
 ![목록 화면](docs/screen-list.png)
 
-<sub>English: Hannune is a Korean-first desktop deadline board for Windows and macOS. Add tasks in plain Korean, reschedule them by typing, find deadlines inside your documents, sync to Google Calendar, and optionally use a free AI agent.</sub>
+<sub>English: Hannune is a Korean-first desktop deadline board for Windows and macOS. Type tasks in plain Korean (it reads dates like 270301 or 27.3.1 and learns from your corrections), reschedule them by typing or speaking, find deadlines inside your documents, sync to Google Calendar, run a local AI on your own PC, and get new versions automatically.</sub>
 
 ---
 
@@ -12,12 +12,17 @@
 
 - **세 가지 화면**: 목록(급한 순), 4분면(급함 × 중요), 달력 띠(앞뒤 8주)
 - **글로 바로 넣기**: 아래 칸에 `내일 오후 3시까지 보고서 제출 ★★★`처럼 쓰고 Enter를 누르면 됩니다.
+  - 날짜를 너그럽게 읽습니다: `270301`, `27.3.1`, `27/3/1`, `3/1(월)`, `낼오후4시30분`, `담쥬 금욜`, `D-3` …
+  - **고친 것을 배웁니다**: 넣은 날짜를 2주 안에 고치면(예: `260101`을 1월 26일 1시 → 26년 1월 1일로), 다음부터 그렇게 읽습니다.
+- **말로 넣기·말하는 비서**(선택, Gemini 무료 키): 말하는 동안 글자가 바로 보이고, "오늘 뭐 있어?", "보고서 이틀 미뤄 줘"처럼 말로 물으면 답하고 바꿔 줍니다.
 - **글로 바꾸기**: 목록에서 오른쪽 클릭 → `이틀 미뤄 줘`, `다음주 금요일 3시`, `별 넷`, `완료`라고 쓰면 됩니다. 오타와 띄어쓰기가 틀려도 알아듣고, 바꾸기 전에 확인 창을 보여 줍니다.
 - **완료 체크**: 체크하면 줄이 그어지고 흐리게 바뀝니다.
 - **문서에서 마감 찾기**: 폴더를 지정하면 그 안의 한글·워드·PDF·엑셀·파워포인트 문서에서 마감 날짜를 찾아 줍니다.
 - **알림**: 마감 1일·5시간·1시간 전에 알려 주고, **구글 캘린더**에 자동으로 넣습니다. 폰과 삼성 캘린더에서도 보입니다.
 - **쉴 때 알림**: 한동안 키보드·마우스를 쓰지 않으면 창이 앞으로 나와 급한 일을 보여 줍니다. 항상 위에 떠 있는 **미니 창**도 있습니다.
 - (선택) **무료 AI 에이전트**: Gemini 무료 키, Groq, OpenRouter 무료 모델, 내 PC에서 돌리는 Ollama, Claude Code 중에서 고를 수 있습니다.
+- (선택) **내 PC AI**: 설정 › 내 PC AI에서 Ollama를 설치하고, Gemma·Qwen 같은 새 모델을 목록에서 눌러 받아 바로 씁니다. 인터넷 없이 내 컴퓨터 안에서만 돕니다.
+- **새 판 자동 받기**: 새 판이 나오면 알려 주고 받아 둡니다. 윈도우는 끝낼 때 저절로 바뀌고, 맥은 받은 dmg를 열어 드립니다.
 
 ---
 
@@ -55,6 +60,14 @@
      xattr -cr /Applications/Hannune.app
      ```
    (애플 유료 인증을 받지 않은 무료 앱이라 처음 한 번만 나오는 안내입니다.)
+
+### 새 판으로 바꾸기 (업데이트)
+
+- **1.11.0부터는 앱이 알아서 합니다.** 켤 때와 6시간마다 새 판이 있는지 보고, 있으면 화면 아래에 **새 판** 표시가 뜹니다.
+  - **윈도우**: 새 판을 받아 두었다가 앱을 끝낼 때 바꿉니다. 바로 바꾸려면 **설정 › 새 판 받기 › 설치하고 다시 켜기**.
+  - **맥**: 새 판 dmg를 다운로드 폴더에 받아 열어 드립니다. 열린 창에서 Hannune을 Applications로 끌어 놓으면 바뀝니다. (애플 유료 서명이 없는 앱은 저절로 바꿔 끼울 수 없어서입니다.)
+- 설정 › **새 판 받기**에서 자동 확인·바로 받기를 끄거나, **지금 확인**을 누를 수 있습니다.
+- 1.2.1 이하를 쓰고 있다면 이번 한 번만 위 **최신판 내려받기**에서 받아 설치하세요. 설정·할 일 기록은 그대로 남습니다.
 
 ### 지우기
 
@@ -135,6 +148,8 @@
 | / | 찾기 |
 | Ctrl+Alt+H | 창 열기·숨기기 |
 | Ctrl+Alt+M | 미니 창 |
+| Ctrl+Alt+V | 말로 넣기 (Gemini 키가 있을 때) |
+| Ctrl+Alt+B | 말하는 비서 |
 | 트레이 아이콘 오른쪽 클릭 | 모니터 가운데로 옮기기, 끝내기 |
 
 ---
@@ -146,7 +161,9 @@
   - 맥: `~/Library/Application Support/Hannune/data`
 - 밖으로 나가는 경우는 내가 켰을 때뿐입니다.
   - 구글 캘린더를 연결하면 마감 이름·날짜·알람이 **내 구글 계정**으로 갑니다.
-  - AI 에이전트를 켜면 정리할 글이 **고른 AI**로 갑니다. Ollama는 내 PC 안에서만 돕니다.
+  - AI 에이전트를 켜면 정리할 글이 **고른 AI**로 갑니다. Ollama(내 PC AI)는 내 PC 안에서만 돕니다.
+  - 말로 넣기·말하는 비서를 켜면 내 목소리가 **고른 받아쓰기 서비스**(기본 Gemini)로 갑니다.
+  - 새 판 받기는 GitHub에 새 판이 있는지만 묻습니다. 내 기록은 보내지 않습니다.
 - 창 사용 기록(윈도우, 선택 기능)은 처음에 꺼져 있습니다. 켜면 화면 위에 "● 창 기록 중"이 보입니다.
 - Claude Code를 쓰는 사람은 그 메모리·대화 기록(`~/.claude`)을 읽어 프로젝트로 보여 줍니다. 읽기만 합니다.
 
@@ -161,7 +178,7 @@ npm run dist:win     # 윈도우 설치본 → dist/
 npm run dist:mac     # 맥 설치본(맥에서)
 ```
 
-`v1.2.0` 같은 태그를 올리면 GitHub Actions가 윈도우·맥 설치본을 만들어 **Releases**에 올립니다.
+`v1.11.0` 같은 태그를 올리면 GitHub Actions가 윈도우·맥 설치본을 만들어 **Releases**에 올립니다. 윈도우 설치본의 `latest.yml`·`.blockmap`은 앱의 새 판 받기가 씁니다.
 
 ---
 

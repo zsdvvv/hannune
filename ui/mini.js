@@ -42,6 +42,65 @@ $('#open').onclick = () => hn.showMain();
 $('#hideDone').onclick = async () => { set = await hn.setSettings({ hideDone: !set.hideDone }); render(); };
 $('#x').onclick = () => hn.mini(false);
 
+// 말로 넣기: 미니 창에서 바로 듣고 → 받아 적어 → 본 창의 '바로 넣기'와 같은 규칙으로 넣는다
+const Cap = new VoiceCore.Capture({ preRollMs: 300, warmMs: 20000 });
+let pressAt = 0;
+let VS = null;
+const mv = (html, err, hold) => { const el = $('#mv'); el.hidden = !html; el.innerHTML = html || ''; el.classList.toggle('err', !!err); clearTimeout(mv.t); if (html && !hold) mv.t = setTimeout(() => { el.hidden = true; }, 6000); };
+const mic = $('#mMic');
+const paint = lv => { mic.className = 'mic ' + (VS ? VS.state : ''); if (lv !== undefined) mic.style.setProperty('--lv', lv.toFixed(2)); };
+async function miniStart() {
+  if (VS && VS.state === 'listening') { if (Cap.active) Cap.stop('user'); return; }
+  if (VS) return;
+  const info = await hn.voiceInfo();
+  if (!info.ready) { mv(esc(info.why), true); return; }
+  const v = set.voice || {};
+  const id = LinkCore.newId();
+  VS = { id, state: 'listening', t0: Date.now(), hold: true };
+  paint(0); mv('듣는 중… 말하세요', false, true);
+  Voice.hush();
+  hn.voiceBegin({ id, where: 'mini', source: 'mini' });
+  Cap.touch();
+  try { await Cap.openMic(); } catch (e) { hn.voiceCancel(id); VS = null; paint(); mv('마이크를 열지 못했습니다: ' + esc(e.message), true); return; }
+  if (!VS || VS.id !== id) return;
+  Cap.begin({
+    onChunk: b => hn.voiceChunk(id, b),
+    onLevel: lv => { if (VS && VS.id === id) paint(lv); },
+    onEnd: why => {
+      if (why === 'nospeech') { hn.voiceCancel(id); VS = null; paint(); mv('아무 말도 들리지 않았습니다.', true); return; }
+      if (VS) VS.state = 'busy'; paint(); hn.voiceEnd(id);
+    },
+  }, { auto: !VS.hold, silenceMs: v.silenceMs, maxSec: v.maxSec });
+}
+function miniRelease(e) {
+  if (!VS || VS.state !== 'listening' || !VS.hold) return;
+  if (e.timeStamp - pressAt < 350) { VS.hold = false; if (Cap.active) Cap.setAuto(true, { silenceMs: (set.voice || {}).silenceMs, maxMs: ((set.voice || {}).maxSec || 30) * 1000 }); }
+  else if (Cap.active) Cap.stop('user');
+}
+mic.addEventListener('pointerdown', e => { e.preventDefault(); pressAt = e.timeStamp; try { mic.setPointerCapture(e.pointerId); } catch (_) { /* 무시 */ } miniStart(); });
+mic.addEventListener('pointerup', miniRelease);
+mic.addEventListener('pointercancel', miniRelease);
+mic.addEventListener('mouseenter', () => { if (VS) return; hn.voiceWarm(); Cap.warm(20000).catch(() => { /* 누를 때 다시 알림 */ }); });
+async function miniEvt(ev) {
+  if (!VS || ev.id !== VS.id) return;
+  if (ev.type === 'interim') { mv(esc(ev.text), false, true); return; }
+  if (ev.type === 'busy') { VS.state = 'busy'; paint(); mv('받아 적는 중…', false, true); return; }
+  if (ev.type === 'error') { VS = null; paint(); mv(esc(ev.msg), true); return; }
+  if (ev.type !== 'final') return;
+  VS = null; paint();
+  if (!ev.text) { mv('들린 말이 없습니다.', true); return; }
+  const v = set.voice || {};
+  const p = NLP.parse(ev.text, { mode: 'quick', custom: set.nlp.custom, learn: set.nlp.learn });
+  const g = k => (p.actions.find(a => a.type === k) || {}).value;
+  if (!p.title) { mv(`들은 말: “${esc(ev.text)}” — 할 일 이름을 함께 말해 주세요.`, true); return; }
+  let date = g('date'); if (!date && g('time')) date = ymd(new Date());
+  const kind = g('kind') || 'deadline';
+  await hn.addManual({ title: p.title, area: g('area') || '개인', date, time: g('time') || '', label: kind === 'event' ? '일정' : '마감', imp: g('imp') || 0, kind, src: ev.text });
+  const when = date ? NLP.fmtDate(date) + (g('time') ? ' ' + g('time') : '') : '';
+  mv(`넣었습니다: <b>${esc(p.title)}</b>${when ? ' · ' + esc(when) : ''}${g('imp') ? ' · ' + '★'.repeat(g('imp')) : ''}`);
+  if (v.speak) Voice.say(`넣었습니다. ${p.title}${when ? ', ' + when : ''}`, { voiceName: v.voiceName, rate: v.rate });
+}
+
 function tick() { $('#clock').textContent = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }); }
 
 (async () => {
@@ -49,6 +108,9 @@ function tick() { $('#clock').textContent = new Date().toLocaleTimeString('ko-KR
   hn.on('board', b => { board = b; render(); });
   hn.on('settings', s => { set = s; render(); });
   hn.on('activity', a => { act = a; render(); });
+  hn.on('voice:evt', miniEvt);
+  { const m = (set.voice || {}).micMode || 'std'; Cap.opts.audio = { channelCount: 1, echoCancellation: m !== 'raw', noiseSuppression: m === 'noisy', autoGainControl: m !== 'raw' }; }
+  Cap.prepare();
   setInterval(tick, 1000);
   tick();
   render();

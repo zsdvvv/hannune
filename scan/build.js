@@ -18,7 +18,7 @@ const PATH_AREA = []; // 폴더 경로로 영역을 정하는 규칙(필요하�
 const KW_AREA = [
   ['업무', /공문|기관|보고서|회의|출장|업무|결재|협의|회신|부서|팀장|사내/g],
   ['학교', /대학원|대학교|학교|수업|과제|학기|강의|자격증|시험공부|교수/g],
-  ['연구', /논문|학회|KSC|EvoMUSART|특허|LNCS|투고/g],
+  ['연구', /논문|학회|특허|투고|저널|연구실|실험/g],
   ['집필', /\(책\)|『|집필|원고|교정지|에세이/g],
   ['창업', /창업|사업화|투자자|경진대회|공모전|지원서|스타트업|모두의|해커톤|본선|예선/g],
   ['개발', /앱|웹|개발|로블록스|게임|확장|플랫폼|Workers|Unity|프로그램|자동화|도구|배포|서버/gi],
@@ -138,6 +138,7 @@ const BANDS = [
 function buildBoard(ctx) {
   const now = ctx.now || Date.now();
   const nowDate = new Date(now);
+  const areaList = AREAS.slice();
   const t0 = today0(nowDate);
   const user = ctx.user || {};
   const uItems = user.items || {};
@@ -296,6 +297,27 @@ function buildBoard(ctx) {
     items.set(mi.id, it);
   }
 
+  // 5-1) 폰 캘린더(삼성 캘린더에 보이는 삼성 계정·구글·폰 저장 일정)에서 폰 앱이 보낸 일정. 그대로 보여 주기만 한다.
+  const pcal = ctx.phoneCal;
+  // 폰 캘린더 영역은 정해진 영역 목록에 없으므로 이번 판에서만 덧붙인다(가져온 일정이 있을 때만 왼쪽에 보인다)
+  const pcArea = String((settings.phoneCal || {}).area || '폰 캘린더').trim().slice(0, 20) || '폰 캘린더';
+  if (pcal && (settings.phoneCal || {}).show !== false && (pcal.events || []).length && !areaList.some(a => a.id === pcArea)) areaList.push({ id: pcArea, color: '#2F7F8C' });
+  if (pcal && (settings.phoneCal || {}).show !== false) {
+    for (const ev of pcal.events || []) {
+      if (!ev.key || !ev.title || !/^\d{4}-\d{2}-\d{2}$/.test(ev.date || '')) continue;
+      if (ev.end && ev.end < now) continue; // 이미 끝난 일정은 다음 맞춤 전에도 '지남'으로 남기지 않는다
+      const it = newItem('pc:' + ev.key, 'phonecal');
+      it.baseTitle = ev.title;
+      it.hook = [ev.cal, ev.location].filter(Boolean).join(' · ');
+      it.text = ev.title;
+      it.lastTs = pcal.at || 0;
+      it.manualArea = pcArea;
+      it.calGroup = ev.cal || '캘린더';
+      it.calDls = [{ date: ev.date, time: ev.time || '', label: ev.allDay ? '종일' : '일정', kind: 'event' }];
+      items.set(it.id, it);
+    }
+  }
+
   // 6) 프로젝트 폴더 안내 글
   for (const it of items.values()) {
     const n = ctx.notes && ctx.notes[it.id];
@@ -312,8 +334,8 @@ function buildBoard(ctx) {
     const det = aiDetails[it.id];
     it.title = u.title || g.title || it.baseTitle;
     it.area = u.area || g.area || it.manualArea || ruleArea(it.text + ' ' + it.baseTitle + ' ' + (it.notesText || '').slice(0, 800), it.primary);
-    if (!AREAS.some(a => a.id === it.area)) it.area = '개인';
-    it.group = u.group || g.group || (it.kind === 'dir' ? it.baseTitle : it.kind === 'manual' ? '할 일' : groupFromPath(it.primary, ctx.rootsInfo) || it.baseTitle);
+    if (!areaList.some(a => a.id === it.area)) it.area = '개인';
+    it.group = u.group || g.group || (it.kind === 'dir' ? it.baseTitle : it.kind === 'manual' ? '할 일' : it.kind === 'phonecal' ? it.calGroup : groupFromPath(it.primary, ctx.rootsInfo) || it.baseTitle);
     it.importance = u.imp || 0;
     it.note = u.note || '';
     it.hidden = !!u.hidden;
@@ -326,7 +348,7 @@ function buildBoard(ctx) {
 
     // 마감: AI 결과가 있으면 그것(확신 0.4 미만은 뺌), 없으면 글에서 찾은 바탕값. 내가 넣은 것은 항상.
     const anchor = it.anchor ? new Date(it.anchor) : nowDate;
-    let found = deadlinesFrom(it.text || '', anchor, 'auto');
+    let found = it.kind === 'phonecal' ? [] : deadlinesFrom(it.text || '', anchor, 'auto'); // 캘린더 일정은 제목 속 날짜를 따로 찾지 않는다
     if (it.notesText) found = found.concat(deadlinesFrom(it.notesText, new Date(it.notesMt || now), 'auto'));
     it.candidates = found.map(d => `${d.date} ${d.label}`).slice(0, 12);
     let auto;
@@ -345,6 +367,7 @@ function buildBoard(ctx) {
       const prev = byDate.get(d.date);
       if (!prev || prev.src !== 'me') byDate.set(d.date, { date: d.date, label: d.label, kind: d.kind || 'deadline', conf: 1, src: 'doc', time: d.time || '', doc: { file: d.file, name: d.name, key: d.key } });
     }
+    for (const d of it.calDls || []) byDate.set(d.date, { date: d.date, label: d.label, kind: d.kind, conf: 1, src: 'cal', time: d.time });
     for (const d of u.myDeadlines || []) byDate.set(d.date, { date: d.date, label: d.label || '마감', kind: d.kind || 'deadline', conf: 1, src: 'me', time: d.time || '' });
     const dls = [];
     for (const d of byDate.values()) {
@@ -353,8 +376,8 @@ function buildBoard(ctx) {
       const days = daysUntil(d.date, nowDate);
       dls.push({
         date: d.date, label: st.label || d.label, kind: d.kind, src: d.src,
-        time: st.time || d.time || dueTime,
-        confirmed: d.src === 'me' || d.src === 'doc' || !!st.confirmed,
+        time: st.time || d.time || (d.src === 'cal' ? '' : dueTime), // 종일 일정은 시각 없이 둔다
+        confirmed: d.src === 'me' || d.src === 'doc' || d.src === 'cal' || !!st.confirmed,
         done: !!st.done, days, conf: d.conf, doc: d.doc,
       });
     }
@@ -400,6 +423,8 @@ function buildBoard(ctx) {
     delete it.text;
     delete it.notesText;
     delete it.docDls;
+    delete it.calDls;
+    delete it.calGroup;
     out.push(it);
   }
 
@@ -420,7 +445,7 @@ function buildBoard(ctx) {
   return {
     generatedAt: now,
     today: ymd(t0),
-    areas: AREAS,
+    areas: areaList,
     bands: BANDS,
     items: out,
     unassigned: unassigned.slice(0, 40),

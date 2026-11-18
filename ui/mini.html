@@ -28,14 +28,26 @@
   .mr.done .t { text-decoration: line-through; }
   .mh button.on { background: var(--ink); color: var(--paper); }
   body.mini { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+  .mh .mic { -webkit-app-region: no-drag; width: 26px; height: 26px; }
+  .mv { flex: none; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--rule-2); background: var(--sheet-2); color: var(--ink-2); }
+  .mv[hidden] { display: none; }
+  .mv b { color: var(--ink); }
+  .mv.err { color: var(--red); }
 </style>
 </head>
 <body class="mini">
 <div class="mh"><span class="mark">한눈에</span><span class="clock num" id="clock"></span><span class="sp"></span>
+  <button class="mic" id="mMic" title="말로 넣기 — 눌렀다 떼면 말이 끝날 때, 누르고 있으면 손을 뗄 때 바로 넣습니다"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="cap" x="9" y="2.6" width="6" height="11.4" rx="3"/><path d="M5.2 11.2a6.8 6.8 0 0 0 13.6 0"/><path d="M12 18v3.2M8.8 21.2h6.4"/></svg><span class="ring"></span></button>
   <button id="hideDone">끝낸 일 감추기</button><button id="open" title="본 창 열기">본 창</button><button id="x" title="미니 창 닫기">×</button></div>
+<div class="mv" id="mv" hidden></div>
 <div id="list"></div>
 <div class="mf" id="mf"></div>
 <script src="common.js"></script>
+<script src="nlp.js"></script>
+<script src="tips.js"></script>
+<script src="linkcore.js"></script>
+<script src="voicecore.js"></script>
+<script src="voice.js"></script>
 <script src="mini.js"></script>
 </body>
 </html>

@@ -33,6 +33,7 @@ function entries(board, settings) {
   const out = [];
   for (const it of board.items || []) {
     if (it.hidden || it.done || it.band === 'done') continue; // 끝낸 일은 캘린더·알람에서 빠진다
+    if (it.kind === 'phonecal') continue; // 폰 캘린더에서 가져온 일정은 다시 캘린더로 내보내지 않는다(같은 일정이 되돌아와 두 번 보이지 않게)
     for (const d of it.deadlines || []) {
       if (d.done || d.days < 0) continue;
       if (scope === 'confirmed' && !d.confirmed) continue;

@@ -1,8 +1,8 @@
 {
   "name": "hannune",
   "productName": "Hannune",
-  "version": "1.2.1",
-  "description": "할 일·마감을 긴박한 순으로 한눈에 — 글로 바꾸기, 문서에서 일정 찾기, 구글 캘린더, 무료 AI 에이전트",
+  "version": "1.11.0",
+  "description": "할 일·마감을 긴박한 순으로 한눈에 — 바로 넣기(날짜를 알아서 읽고 고친 것을 배움), 글로 바꾸기, 말로 넣기·말하는 비서, 문서에서 일정 찾기, 구글 캘린더, 내 PC AI·무료 AI 에이전트, 새 판 자동 받기",
   "main": "main.js",
   "author": "zsdvvv",
   "license": "UNLICENSED",
@@ -19,6 +19,7 @@
     "dist:linux": "electron-builder --linux AppImage --publish never"
   },
   "dependencies": {
+    "electron-updater": "^6.8.11",
     "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
@@ -42,6 +43,7 @@
       "svc/**",
       "ui/**",
       "assets/**",
+      "edition.json",
       "package.json"
     ],
     "asarUnpack": [
